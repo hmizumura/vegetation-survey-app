@@ -414,6 +414,7 @@
     const storageKey = "vegetation-survey-offline-v1";
     const uploadQueueKey = "vegetation-survey-upload-queue-v1";
     const DRIVE_UPLOAD_ENDPOINT = "https://script.google.com/macros/s/AKfycby2RlREzpCkv7xnlXzKBk6IraaqCGqSLmm3lW79t_ZVAdRsHJncPqEe5E-wFGU1xSYo/exec";
+    let isSaving = false;
 
     function options(values) {
       return values.map((value) => `<option>${value}</option>`).join("");
@@ -566,6 +567,8 @@
     }
 
     async function saveData() {
+      if (isSaving) return;
+      isSaving = true;
       const data = getFormData();
       localStorage.setItem(storageKey, JSON.stringify(data));
       const queue = getUploadQueue();
@@ -577,7 +580,16 @@
       });
       setUploadQueue(queue);
       updateQueueStatus("端末保存済み");
-      await syncQueuedUploads();
+      try {
+        await syncQueuedUploads();
+      } finally {
+        isSaving = false;
+      }
+    }
+
+    function saveDraftOnly(statusText = "下書き保存済み") {
+      localStorage.setItem(storageKey, JSON.stringify(getFormData()));
+      updateQueueStatus(statusText);
     }
 
     function loadData() {
@@ -649,7 +661,7 @@
       updateQueueStatus(remaining.length ? "一部未送信" : "Drive送信済み");
     }
 
-    function getLocation() {
+    async function getLocation() {
       const message = document.getElementById("geoMessage");
       document.getElementById("latitude").readOnly = true;
       document.getElementById("longitude").readOnly = true;
@@ -657,18 +669,41 @@
         message.textContent = "位置情報を取得できないブラウザです";
         return;
       }
+      if (!window.isSecureContext) {
+        message.textContent = "HTTPSで開いてください。位置情報はhttpでは許可されません";
+        return;
+      }
+      if (navigator.permissions && navigator.permissions.query) {
+        try {
+          const permission = await navigator.permissions.query({ name: "geolocation" });
+          if (permission.state === "denied") {
+            message.textContent = "位置情報がブロックされています。ブラウザ設定でこのサイトの位置情報を許可してください";
+            return;
+          }
+        } catch (error) {
+          // Some mobile browsers do not support querying geolocation permission.
+        }
+      }
       message.textContent = "取得中";
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           document.getElementById("latitude").value = pos.coords.latitude.toFixed(8);
           document.getElementById("longitude").value = pos.coords.longitude.toFixed(8);
           message.textContent = `精度 ${Math.round(pos.coords.accuracy)}m`;
-          saveData();
+          saveDraftOnly("位置取得済み");
         },
         (error) => {
-          message.textContent = error.message || "位置情報の取得に失敗しました";
+          if (error.code === error.PERMISSION_DENIED) {
+            message.textContent = "位置情報が許可されませんでした。ブラウザ設定でこのサイトの位置情報を許可してください";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            message.textContent = "位置情報を取得できません。屋外でGPSを有効にして再試行してください";
+          } else if (error.code === error.TIMEOUT) {
+            message.textContent = "位置情報の取得が時間切れです。空が見える場所で再試行してください";
+          } else {
+            message.textContent = error.message || "位置情報の取得に失敗しました";
+          }
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
       );
     }
 
