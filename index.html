@@ -214,24 +214,10 @@
     }
 
     .percent-step {
-      display: grid;
-      grid-template-columns: 44px 1fr 44px;
-      gap: 6px;
-      align-items: center;
+      display: block;
     }
 
-    .percent-step button {
-      height: 46px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #edf5ef;
-      color: var(--accent-dark);
-      font-size: 1.2rem;
-      font-weight: 900;
-    }
-
-    .percent-step input {
-      text-align: center;
+    .percent-step select {
       font-weight: 800;
     }
 
@@ -360,10 +346,20 @@
           <div class="grid">
             <div>
               <div class="label">裸地被覆率</div>
-              <div class="percent-step" data-stepper>
-                <button type="button" data-delta="-10">−</button>
-                <input name="裸地被覆率_10m" inputmode="numeric" value="0" data-percent>
-                <button type="button" data-delta="10">＋</button>
+              <div class="percent-step">
+                <select name="裸地被覆率_10m" data-percent>
+                  <option value="0">0%</option>
+                  <option value="10">10%</option>
+                  <option value="20">20%</option>
+                  <option value="30">30%</option>
+                  <option value="40">40%</option>
+                  <option value="50">50%</option>
+                  <option value="60">60%</option>
+                  <option value="70">70%</option>
+                  <option value="80">80%</option>
+                  <option value="90">90%</option>
+                  <option value="100">100%</option>
+                </select>
               </div>
             </div>
             <div>
@@ -413,11 +409,11 @@
     ];
     const mainDominants = ["", "ササ", "草本", "落広", "落針", "常針"];
     const smallDominants = ["", "ササ", "草本（広葉）", "草本（マメ科）", "実生（広葉）", "実生（針葉）"];
-    const positions = ["北西", "北東", "南東", "南西", "中央"];
-    const corners = ["北西", "北東", "南東", "南西"];
+    const positions = ["1", "2", "3", "4", "中央"];
+    const corners = ["1", "2", "3", "4"];
     const storageKey = "vegetation-survey-offline-v1";
     const uploadQueueKey = "vegetation-survey-upload-queue-v1";
-    const DRIVE_UPLOAD_ENDPOINT = "";
+    const DRIVE_UPLOAD_ENDPOINT = "https://script.google.com/macros/s/AKfycby2RlREzpCkv7xnlXzKBk6IraaqCGqSLmm3lW79t_ZVAdRsHJncPqEe5E-wFGU1xSYo/exec";
 
     function options(values) {
       return values.map((value) => `<option>${value}</option>`).join("");
@@ -425,10 +421,14 @@
 
     function percentStepper(name, value = 0) {
       return `
-        <div class="percent-step" data-stepper>
-          <button type="button" data-delta="-10">−</button>
-          <input name="${name}" inputmode="numeric" value="${value}" data-percent>
-          <button type="button" data-delta="10">＋</button>
+        <div class="percent-step">
+          <select name="${name}" data-percent>
+            ${Array.from({ length: 11 }, (_, index) => {
+              const percent = index * 10;
+              const selected = percent === value ? " selected" : "";
+              return `<option value="${percent}"${selected}>${percent}%</option>`;
+            }).join("")}
+          </select>
         </div>
       `;
     }
@@ -685,15 +685,6 @@
     buildLargeQuadrat();
     buildDbh();
     buildSmallQuadrats();
-
-    document.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-delta]");
-      if (!button) return;
-      const stepper = button.closest("[data-stepper]");
-      const input = stepper.querySelector("[data-percent]");
-      input.value = clampPercent(Number(input.value) + Number(button.dataset.delta));
-      setStatus("編集中");
-    });
 
     document.addEventListener("change", (event) => {
       if (event.target.matches("[data-percent]")) normalizePercentInput(event.target);
