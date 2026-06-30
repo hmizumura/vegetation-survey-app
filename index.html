@@ -535,7 +535,21 @@
 
     function createFileName(data) {
       const site = String(data["調査地点"] || "survey").replace(/[\\/:*?"<>|]/g, "_");
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const now = new Date();
+      const parts = new Intl.DateTimeFormat("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+      }).formatToParts(now).reduce((result, part) => {
+        result[part.type] = part.value;
+        return result;
+      }, {});
+      const stamp = `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}`;
       return `${site}_${stamp}.csv`;
     }
 
