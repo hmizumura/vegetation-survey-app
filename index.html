@@ -1,0 +1,725 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#26734d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>植生調査入力</title>
+  <style>
+    :root {
+      --bg: #f5f7f3;
+      --panel: #ffffff;
+      --ink: #1e2a24;
+      --muted: #657169;
+      --line: #cfd8d1;
+      --field: #f9fbf8;
+      --accent: #26734d;
+      --accent-dark: #185239;
+      --warn: #b25328;
+      --focus: #8bc6a4;
+      --shadow: 0 10px 26px rgba(38, 60, 46, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 16px 14px 96px;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      margin: 0 -14px 14px;
+      padding: 12px 14px;
+      background: rgba(245, 247, 243, 0.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(207, 216, 209, 0.8);
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.28rem;
+      letter-spacing: 0;
+    }
+
+    .status {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .field-mark {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, transparent 48%, rgba(255,255,255,0.72) 49%, rgba(255,255,255,0.72) 51%, transparent 52%),
+        linear-gradient(0deg, transparent 48%, rgba(255,255,255,0.72) 49%, rgba(255,255,255,0.72) 51%, transparent 52%),
+        linear-gradient(135deg, #2f7e53, #93b66b 55%, #d4c477);
+      border: 2px solid rgba(30, 42, 36, 0.16);
+      box-shadow: inset 0 0 0 7px rgba(255,255,255,0.18);
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #eef3ed;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.02rem;
+      letter-spacing: 0;
+    }
+
+    .section-body {
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label,
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--field);
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    button:focus-visible {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus);
+    }
+
+    input[readonly] {
+      color: #38463e;
+      background: #eef4f0;
+    }
+
+    .btn {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn.primary:active {
+      background: var(--accent-dark);
+    }
+
+    .btn.warn {
+      color: var(--warn);
+    }
+
+    .geo-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .cover-row {
+      display: grid;
+      grid-template-columns: minmax(96px, 1.1fr) minmax(132px, 1.1fr) minmax(132px, 1fr);
+      gap: 10px;
+      align-items: end;
+    }
+
+    .percent-step {
+      display: grid;
+      grid-template-columns: 44px 1fr 44px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .percent-step button {
+      height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #edf5ef;
+      color: var(--accent-dark);
+      font-size: 1.2rem;
+      font-weight: 900;
+    }
+
+    .percent-step input {
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .quad-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mini-quad {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfb;
+      overflow: hidden;
+    }
+
+    .mini-quad h3 {
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 0.96rem;
+      background: #f0f4ef;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mini-body {
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .measure-5 {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .actions {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 8;
+      background: rgba(245, 247, 243, 0.96);
+      border-top: 1px solid var(--line);
+      padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .actions-inner {
+      max-width: 920px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .message {
+      color: var(--muted);
+      font-size: 0.86rem;
+      min-height: 1.2em;
+    }
+
+    @media (max-width: 720px) {
+      .grid,
+      .grid-3,
+      .geo-row,
+      .cover-row,
+      .measure-5 {
+        grid-template-columns: 1fr;
+      }
+
+      .actions-inner {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="topbar">
+        <div>
+          <h1>植生調査入力</h1>
+          <div class="status" id="saveStatus">未保存</div>
+        </div>
+        <div class="field-mark" aria-hidden="true"></div>
+      </div>
+    </header>
+
+    <form id="surveyForm" autocomplete="off">
+      <section>
+        <div class="section-head">
+          <h2>調査地点</h2>
+        </div>
+        <div class="section-body">
+          <div>
+            <label for="siteName">調査地点</label>
+            <input id="siteName" name="調査地点" maxlength="10" required>
+          </div>
+          <div class="geo-row">
+            <div>
+              <label for="latitude">緯度</label>
+              <input id="latitude" name="緯度" inputmode="decimal" readonly>
+            </div>
+            <div>
+              <label for="longitude">経度</label>
+              <input id="longitude" name="経度" inputmode="decimal" readonly>
+            </div>
+            <button class="btn primary" type="button" id="geoBtn">現在地</button>
+            <button class="btn" type="button" id="geoEditBtn">編集</button>
+          </div>
+          <div class="message" id="geoMessage"></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>10m×10mコドラート</h2>
+        </div>
+        <div class="section-body" id="largeQuadrat"></div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>地表・地形・DBH</h2>
+        </div>
+        <div class="section-body">
+          <div class="grid">
+            <div>
+              <div class="label">裸地被覆率</div>
+              <div class="percent-step" data-stepper>
+                <button type="button" data-delta="-10">−</button>
+                <input name="裸地被覆率_10m" inputmode="numeric" value="0" data-percent>
+                <button type="button" data-delta="10">＋</button>
+              </div>
+            </div>
+            <div>
+              <label for="terrain">地形</label>
+              <select id="terrain" name="地形">
+                <option value=""></option>
+                <option>斜面</option>
+                <option>尾根</option>
+                <option>平地</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="label">DBH（cm）</div>
+            <div class="measure-5" id="dbhInputs"></div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>50cmコドラート</h2>
+        </div>
+        <div class="section-body">
+          <div class="quad-list" id="smallQuadrats"></div>
+        </div>
+      </section>
+    </form>
+  </div>
+
+  <div class="actions">
+    <div class="actions-inner">
+      <button class="btn primary" type="button" id="saveBtn">保存</button>
+      <button class="btn" type="button" id="syncBtn">送信</button>
+      <button class="btn" type="button" id="csvBtn">CSV</button>
+      <button class="btn" type="button" id="loadBtn">読込</button>
+      <button class="btn warn" type="button" id="clearBtn">クリア</button>
+    </div>
+  </div>
+
+  <script>
+    const layers = [
+      ["林床（1m）", "林床_1m"],
+      ["低木層～4m", "低木層_4m"],
+      ["亜高木層4m以上10mまで", "亜高木層_4m以上10mまで"],
+      ["高木層10m以上", "高木層_10m以上"]
+    ];
+    const mainDominants = ["", "ササ", "草本", "落広", "落針", "常針"];
+    const smallDominants = ["", "ササ", "草本（広葉）", "草本（マメ科）", "実生（広葉）", "実生（針葉）"];
+    const positions = ["北西", "北東", "南東", "南西", "中央"];
+    const corners = ["北西", "北東", "南東", "南西"];
+    const storageKey = "vegetation-survey-offline-v1";
+    const uploadQueueKey = "vegetation-survey-upload-queue-v1";
+    const DRIVE_UPLOAD_ENDPOINT = "";
+
+    function options(values) {
+      return values.map((value) => `<option>${value}</option>`).join("");
+    }
+
+    function percentStepper(name, value = 0) {
+      return `
+        <div class="percent-step" data-stepper>
+          <button type="button" data-delta="-10">−</button>
+          <input name="${name}" inputmode="numeric" value="${value}" data-percent>
+          <button type="button" data-delta="10">＋</button>
+        </div>
+      `;
+    }
+
+    function buildLargeQuadrat() {
+      const host = document.getElementById("largeQuadrat");
+      host.innerHTML = layers.map(([label, key]) => `
+        <div class="cover-row">
+          <div>
+            <div class="label">${label}</div>
+            ${percentStepper(`${key}_被覆率`)}
+          </div>
+          <div>
+            <label for="${key}_優占種">優占種</label>
+            <select id="${key}_優占種" name="${key}_優占種">${options(mainDominants)}</select>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function buildDbh() {
+      const host = document.getElementById("dbhInputs");
+      host.innerHTML = positions.map((pos) => `
+        <div>
+          <label for="DBH_${pos}">${pos}</label>
+          <input id="DBH_${pos}" name="DBH_${pos}" inputmode="decimal" type="number" min="0" step="0.1">
+        </div>
+      `).join("");
+    }
+
+    function buildSmallQuadrats() {
+      const host = document.getElementById("smallQuadrats");
+      host.innerHTML = corners.map((corner, index) => {
+        const prefix = `50cm_${index + 1}_${corner}`;
+        return `
+          <div class="mini-quad">
+            <h3>${corner}</h3>
+            <div class="mini-body">
+              <div class="grid">
+                <div>
+                  <label for="${prefix}_緑被率">緑被率（安田ピンク法）%</label>
+                  <input id="${prefix}_緑被率" name="${prefix}_緑被率" inputmode="decimal" type="number" min="0" max="100" step="0.1">
+                </div>
+                <div>
+                  <div class="label">目視被覆率</div>
+                  ${percentStepper(`${prefix}_目視被覆率`)}
+                </div>
+              </div>
+              <div>
+                <label for="${prefix}_優占種">優占種</label>
+                <select id="${prefix}_優占種" name="${prefix}_優占種">${options(smallDominants)}</select>
+              </div>
+              <div>
+                <div class="label">植生高（cm）</div>
+                <div class="measure-5">
+                  ${positions.map((pos) => `
+                    <div>
+                      <label for="${prefix}_植生高_${pos}">${pos}</label>
+                      <input id="${prefix}_植生高_${pos}" name="${prefix}_植生高_${pos}" inputmode="decimal" type="number" min="0" step="0.1">
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+              <div class="grid">
+                <div>
+                  <div class="label">裸地被覆率</div>
+                  ${percentStepper(`${prefix}_裸地被覆率`)}
+                </div>
+                <div>
+                  <div class="label">リター被覆率</div>
+                  ${percentStepper(`${prefix}_リター被覆率`)}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function clampPercent(value) {
+      const number = Number.parseInt(value, 10);
+      if (Number.isNaN(number)) return 0;
+      return Math.min(100, Math.max(0, Math.round(number / 10) * 10));
+    }
+
+    function normalizePercentInput(input) {
+      input.value = clampPercent(input.value);
+    }
+
+    function setStatus(text) {
+      document.getElementById("saveStatus").textContent = text;
+    }
+
+    function csvEscape(value) {
+      return `"${String(value ?? "").replaceAll('"', '""')}"`;
+    }
+
+    function createCsv(data) {
+      const headers = Object.keys(data);
+      const row = headers.map((key) => csvEscape(data[key]));
+      return "\uFEFF" + headers.join(",") + "\n" + row.join(",");
+    }
+
+    function createFileName(data) {
+      const site = String(data["調査地点"] || "survey").replace(/[\\/:*?"<>|]/g, "_");
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      return `${site}_${stamp}.csv`;
+    }
+
+    function getUploadQueue() {
+      try {
+        return JSON.parse(localStorage.getItem(uploadQueueKey) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setUploadQueue(queue) {
+      localStorage.setItem(uploadQueueKey, JSON.stringify(queue));
+    }
+
+    function updateQueueStatus(text = "") {
+      const count = getUploadQueue().length;
+      const suffix = count ? ` / 未送信${count}件` : "";
+      setStatus(text + suffix);
+    }
+
+    function getFormData() {
+      const data = {};
+      new FormData(document.getElementById("surveyForm")).forEach((value, key) => {
+        data[key] = value;
+      });
+      data["保存日時"] = new Date().toISOString();
+      return data;
+    }
+
+    async function saveData() {
+      const data = getFormData();
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      const queue = getUploadQueue();
+      queue.push({
+        fileName: createFileName(data),
+        csv: createCsv(data),
+        data,
+        queuedAt: new Date().toISOString()
+      });
+      setUploadQueue(queue);
+      updateQueueStatus("端末保存済み");
+      await syncQueuedUploads();
+    }
+
+    function loadData() {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) {
+        setStatus("保存データなし");
+        return;
+      }
+      const data = JSON.parse(raw);
+      const form = document.getElementById("surveyForm");
+      Object.entries(data).forEach(([key, value]) => {
+        const field = form.elements.namedItem(key);
+        if (field) field.value = value;
+      });
+      setStatus("読込済み");
+    }
+
+    function clearData() {
+      document.getElementById("surveyForm").reset();
+      document.querySelectorAll("[data-percent]").forEach((input) => input.value = "0");
+      setStatus("クリア済み");
+    }
+
+    function exportCsv() {
+      const data = getFormData();
+      const csv = createCsv(data);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = createFileName(data);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setStatus("CSV出力済み");
+    }
+
+    async function syncQueuedUploads() {
+      if (!DRIVE_UPLOAD_ENDPOINT) {
+        updateQueueStatus("送信先URL未設定");
+        return;
+      }
+      if (!navigator.onLine) {
+        updateQueueStatus("オフライン保存中");
+        return;
+      }
+
+      const queue = getUploadQueue();
+      if (!queue.length) {
+        updateQueueStatus("未送信なし");
+        return;
+      }
+
+      const remaining = [];
+      for (const item of queue) {
+        try {
+          await fetch(DRIVE_UPLOAD_ENDPOINT, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(item)
+          });
+        } catch (error) {
+          remaining.push(item);
+        }
+      }
+      setUploadQueue(remaining);
+      updateQueueStatus(remaining.length ? "一部未送信" : "Drive送信済み");
+    }
+
+    function getLocation() {
+      const message = document.getElementById("geoMessage");
+      document.getElementById("latitude").readOnly = true;
+      document.getElementById("longitude").readOnly = true;
+      if (!navigator.geolocation) {
+        message.textContent = "位置情報を取得できないブラウザです";
+        return;
+      }
+      message.textContent = "取得中";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById("latitude").value = pos.coords.latitude.toFixed(8);
+          document.getElementById("longitude").value = pos.coords.longitude.toFixed(8);
+          message.textContent = `精度 ${Math.round(pos.coords.accuracy)}m`;
+          saveData();
+        },
+        (error) => {
+          message.textContent = error.message || "位置情報の取得に失敗しました";
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
+    function toggleGeoEdit() {
+      const latitude = document.getElementById("latitude");
+      const longitude = document.getElementById("longitude");
+      const editable = latitude.readOnly;
+      latitude.readOnly = !editable;
+      longitude.readOnly = !editable;
+      document.getElementById("geoMessage").textContent = editable ? "緯度経度を編集できます" : "";
+      if (editable) latitude.focus();
+    }
+
+    buildLargeQuadrat();
+    buildDbh();
+    buildSmallQuadrats();
+
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-delta]");
+      if (!button) return;
+      const stepper = button.closest("[data-stepper]");
+      const input = stepper.querySelector("[data-percent]");
+      input.value = clampPercent(Number(input.value) + Number(button.dataset.delta));
+      setStatus("編集中");
+    });
+
+    document.addEventListener("change", (event) => {
+      if (event.target.matches("[data-percent]")) normalizePercentInput(event.target);
+      setStatus("編集中");
+    });
+
+    document.getElementById("siteName").addEventListener("input", (event) => {
+      event.target.value = event.target.value.slice(0, 10);
+    });
+    document.getElementById("geoBtn").addEventListener("click", getLocation);
+    document.getElementById("geoEditBtn").addEventListener("click", toggleGeoEdit);
+    document.getElementById("saveBtn").addEventListener("click", saveData);
+    document.getElementById("syncBtn").addEventListener("click", syncQueuedUploads);
+    document.getElementById("loadBtn").addEventListener("click", loadData);
+    document.getElementById("clearBtn").addEventListener("click", clearData);
+    document.getElementById("csvBtn").addEventListener("click", exportCsv);
+    window.addEventListener("online", syncQueuedUploads);
+
+    loadData();
+    updateQueueStatus(document.getElementById("saveStatus").textContent);
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
