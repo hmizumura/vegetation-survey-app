@@ -533,9 +533,7 @@
       return "\uFEFF" + headers.join(",") + "\n" + row.join(",");
     }
 
-    function createFileName(data) {
-      const site = String(data["調査地点"] || "survey").replace(/[\\/:*?"<>|]/g, "_");
-      const now = new Date();
+    function createSendTimestamp(date = new Date()) {
       const parts = new Intl.DateTimeFormat("ja-JP", {
         timeZone: "Asia/Tokyo",
         year: "numeric",
@@ -545,12 +543,27 @@
         minute: "2-digit",
         second: "2-digit",
         hour12: false
-      }).formatToParts(now).reduce((result, part) => {
+      }).formatToParts(date).reduce((result, part) => {
         result[part.type] = part.value;
         return result;
       }, {});
-      const stamp = `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}`;
-      return `${site}_${stamp}.csv`;
+      return `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}${parts.second}`;
+    }
+
+    function createFileName(data, sentAt = new Date()) {
+      const site = String(data["調査地点"] || "survey").replace(/[\\/:*?"<>|]/g, "_");
+      return `${site}_${createSendTimestamp(sentAt)}.csv`;
+    }
+
+    function createUploadItem(data) {
+      const sentAt = new Date();
+      const uploadData = { ...data, "送信日時": sentAt.toISOString() };
+      return {
+        fileName: createFileName(uploadData, sentAt),
+        csv: createCsv(uploadData),
+        data: uploadData,
+        queuedAt: sentAt.toISOString()
+      };
     }
 
     function getUploadQueue() {
@@ -580,25 +593,11 @@
       return data;
     }
 
-    async function saveData() {
-      if (isSaving) return;
-      isSaving = true;
+    function saveData() {
       const data = getFormData();
       localStorage.setItem(storageKey, JSON.stringify(data));
-      const queue = getUploadQueue();
-      queue.push({
-        fileName: createFileName(data),
-        csv: createCsv(data),
-        data,
-        queuedAt: new Date().toISOString()
-      });
-      setUploadQueue(queue);
+      setUploadQueue([]);
       updateQueueStatus("端末保存済み");
-      try {
-        await syncQueuedUploads();
-      } finally {
-        isSaving = false;
-      }
     }
 
     function saveDraftOnly(statusText = "下書き保存済み") {
@@ -653,26 +652,39 @@
       }
 
       const queue = getUploadQueue();
-      if (!queue.length) {
+      const item = queue[queue.length - 1];
+      if (!item) {
         updateQueueStatus("未送信なし");
         return;
       }
 
-      const remaining = [];
-      for (const item of queue) {
-        try {
-          await fetch(DRIVE_UPLOAD_ENDPOINT, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(item)
-          });
-        } catch (error) {
-          remaining.push(item);
-        }
+      try {
+        await fetch(DRIVE_UPLOAD_ENDPOINT, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(item)
+        });
+        setUploadQueue([]);
+        updateQueueStatus("Drive送信済み");
+      } catch (error) {
+        setUploadQueue([item]);
+        updateQueueStatus("未送信1件");
       }
-      setUploadQueue(remaining);
-      updateQueueStatus(remaining.length ? "一部未送信" : "Drive送信済み");
+    }
+
+    async function sendCurrentData() {
+      if (isSaving) return;
+      isSaving = true;
+      const data = getFormData();
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      setUploadQueue([createUploadItem(data)]);
+      updateQueueStatus("送信準備済み");
+      try {
+        await syncQueuedUploads();
+      } finally {
+        isSaving = false;
+      }
     }
 
     async function getLocation() {
@@ -746,7 +758,7 @@
     document.getElementById("geoBtn").addEventListener("click", getLocation);
     document.getElementById("geoEditBtn").addEventListener("click", toggleGeoEdit);
     document.getElementById("saveBtn").addEventListener("click", saveData);
-    document.getElementById("syncBtn").addEventListener("click", syncQueuedUploads);
+    document.getElementById("syncBtn").addEventListener("click", sendCurrentData);
     document.getElementById("loadBtn").addEventListener("click", loadData);
     document.getElementById("clearBtn").addEventListener("click", clearData);
     document.getElementById("csvBtn").addEventListener("click", exportCsv);
